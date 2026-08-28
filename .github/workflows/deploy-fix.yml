@@ -1,0 +1,38 @@
+name: Publicar Cyber Snake
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ajustar jogo
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          s=s.replace('.panel.open{transform:translateX(0)}','.panel.open{transform:translateX(0)}.settings-open #restart{display:none!important}')
+          s=s.replace("$('settings').onclick=()=>{$('panel').classList.add('open');$('restart').style.display='none'};", "$('settings').onclick=()=>{$('panel').classList.add('open');document.querySelector('.app').classList.add('settings-open')};")
+          s=s.replace("$('close').onclick=()=>{$('panel').classList.remove('open');$('restart').style.display=''};", "$('close').onclick=()=>{$('panel').classList.remove('open');document.querySelector('.app').classList.remove('settings-open')};")
+          start=s.find('function preview(k){')
+          end=s.find('function shop(){',start)
+          if start>=0 and end>=0:
+            new_preview='''function preview(k){let q=document.createElement('canvas');q.width=230;q.height=90;let z=q.getContext('2d'),co=skins[k];z.fillStyle='#071018';z.fillRect(0,0,230,90);for(let i=0;i<6;i++){z.fillStyle=i%2?co[1]:co[0];z.fillRect(82+i*21,59,19,19)}let dragon=dragons.includes(k);z.fillStyle=co[1];z.fillRect(27,34,57,48);z.fillStyle=co[0];z.fillRect(32,28,49,49);if(dragon){z.fillStyle=co[1];z.fillRect(35,17,11,18);z.fillRect(68,17,11,18);z.fillStyle='#fff';z.fillRect(40,37,9,9);z.fillRect(65,37,9,9);z.fillStyle='#111';z.fillRect(43,40,3,3);z.fillRect(68,40,3,3);z.fillStyle=co[1];z.fillRect(42,57,28,7);z.fillStyle='#fff2dc';z.fillRect(34,61,7,10);z.fillRect(71,61,7,10);z.fillStyle='#7b3f22';z.fillRect(48,9,7,14);z.fillRect(59,9,7,14);z.fillStyle=co[1];z.fillRect(30,25,9,9);z.fillRect(74,25,9,9)}else{z.fillStyle='#fff';z.fillRect(39,37,9,9);z.fillRect(65,37,9,9);z.fillStyle='#111';z.fillRect(42,40,3,3);z.fillRect(68,40,3,3);z.fillStyle=co[1];z.fillRect(47,59,20,4)}return q.toDataURL()}'''
+            s=s[:start]+new_preview+s[end:]
+          p.write_text(s)
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - uses: actions/deploy-pages@v4
